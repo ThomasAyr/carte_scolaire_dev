@@ -18,37 +18,10 @@ st.set_page_config(
 )
 
 with st.sidebar:
-    st.image("graphics composents/school-map-logo.svg", width=80)
+    st.image("graphics composents/school-map-logo-text.svg", width=250)
     st.markdown("---")
 
-# Style CSS sidebar
-st.markdown("""
-    <style>
-    [data-testid="stSidebarNav"] {
-        background-image: url("graphics composents/school-map-logo.svg");
-        background-repeat: no-repeat;
-        background-position: 20px 20px;
-        background-size: 50px auto;
-        padding-top: 100px;
-    }
-    [data-testid="stImageContainer"]:after {
-        content: "SectoAppli";
-        display: flex;
-        align-items: center;
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        left: 50%;
-        transform: translateX(-50%);
-        color: white;
-        font-size: 24px;
-        font-weight: bold;
-        height: 100%;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-# Style CSS amélioré
+# Style CSS
 st.markdown("""
     <style>    
     /* Style gris */
