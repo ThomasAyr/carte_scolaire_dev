@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+    <!-- Fond circulaire -->
+    <circle cx="100" cy="100" r="90" fill="#1E3D59"/>
+    
+    <!-- Bâtiment école stylisé -->
+    <path d="M100 30 L160 70 L160 150 L40 150 L40 70 Z" fill="#FFFFFF"/>
+    
+    <!-- Toit -->
+    <path d="M100 20 L170 65 L30 65 Z" fill="#FF6B6B"/>
+    
+    <!-- Fenêtres -->
+    <rect x="60" y="85" width="20" height="20" fill="#1E3D59"/>
+    <rect x="120" y="85" width="20" height="20" fill="#1E3D59"/>
+    <rect x="60" y="115" width="20" height="20" fill="#1E3D59"/>
+    <rect x="120" y="115" width="20" height="20" fill="#1E3D59"/>
+    
+    <!-- Porte -->
+    <rect x="90" y="110" width="20" height="40" fill="#1E3D59"/>
+    
+    <!-- Marques de carte stylisées -->
+    <circle cx="70" cy="100" r="3" fill="#FF6B6B"/>
+    <circle cx="130" cy="100" r="3" fill="#FF6B6B"/>
+    
+    <!-- Pin de localisation -->
+    <path d="M100 65 L105 75 L100 85 L95 75 Z" fill="#FF6B6B"/>
+</svg>

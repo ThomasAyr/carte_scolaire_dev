@@ -10,8 +10,43 @@ st.set_page_config(
     page_title="Carte scolaire Occitanie",
     page_icon="🏫",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
+    menu_items={
+        'About': "Carte Scolaire Occitanie",
+        'Get Help': 'https://github.com/ThomasAyr/carte_scolaire_dev',
+    }
 )
+
+with st.sidebar:
+    st.image("graphics composents/school-map-logo.svg", width=80)
+    st.markdown("---")
+
+# Style CSS sidebar
+st.markdown("""
+    <style>
+    [data-testid="stSidebarNav"] {
+        background-image: url("graphics composents/school-map-logo.svg");
+        background-repeat: no-repeat;
+        background-position: 20px 20px;
+        background-size: 50px auto;
+        padding-top: 100px;
+    }
+    [data-testid="stImageContainer"]:after {
+        content: "SectoAppli";
+        display: flex;
+        align-items: center;
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        color: white;
+        font-size: 24px;
+        font-weight: bold;
+        height: 100%;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
 # Style CSS amélioré
 st.markdown("""
@@ -152,7 +187,7 @@ def get_etablissements_api(codes_rne):
         return None
     
     where_clause = " OR ".join([f'identifiant_de_l_etablissement = "{code}"' for code in codes_rne])
-    url = "https://data.occitanie.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-annuaire-education/records"
+    url = "https://data.occitanie.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-annuaire-education/api"
     params = {
         "where": where_clause,
         "limit": 20
@@ -237,7 +272,7 @@ def afficher_etablissement(etab):
     st.markdown(html, unsafe_allow_html=True)
 
 def search_page():
-    st.title("🏫 Recherche de l'établissement scolaire de secteur")
+    st.title("🏫 Recherchez de l'établissement scolaire de votre secteur")
     
     df = load_data()
     if df is None:
@@ -334,15 +369,108 @@ def search_page():
             
 def about_page():
     st.title("À propos")
-    st.write("""
+    st.markdown("""
     Cette application permet de rechercher des établissements scolaires en Occitanie.
     
-    Elle utilise les données ouvertes de l'académie et permet de :
-    - Rechercher par ville
-    - Filtrer par type d'établissement
-    - Voir la localisation sur une carte
-    - Consulter les caractéristiques détaillées
+    Cette architecture permet de fournir aux utilisateurs un outil complet pour :
+    - Identifier le(s) établissement(s) de secteur des élèves d'Occitanie
+    - Accéder aux informations détaillées de ces établissements
+    - Visualiser leur localisation sur une carte interactive
+    - Visualiser les manques de données et la politique éducative de la région
+
+    Notre application combine trois sources de données, décrites ci-après, pour fournir un service complet à ses usagers.
     """)
+    
+    st.title("Sources de données")
+    st.header("1. Carte scolaire des établissements publics d'Occitanie")
+
+    st.subheader("Source principale")
+    st.markdown("""
+        - **Jeu de données** : Carte scolaire des collèges, lycées publics de la région Occitanie Rentrée 2024
+        - **Fournisseur** : Région académique Occitanie
+        """)
+    st.markdown("[Accéder aux données](https://data.occitanie.education.gouv.fr/explore/dataset/fr-en-occitanie-carte-scolaire-des-colleges-lycees-publics/)")
+
+    st.markdown("""
+    Ce jeu de données est fondamental pour notre application car il contient la sectorisation 
+    complète des établissements scolaires en Occitanie. Il résulte de l'agrégation des 13 fichiers 
+    départementaux utilisés par les DSDEN (Directions des Services Départementaux de l'Éducation 
+    Nationale) pour déterminer automatiquement le ou les établissements de secteur des élèves.
+    """)
+
+    st.subheader("Contexte réglementaire")
+    st.markdown("""
+    La sectorisation des établissements publics est régie par différentes autorités :
+    - Pour les **collèges** : Le conseil départemental définit les secteurs de recrutement, 
+      pouvant inclure des "secteurs multi-collèges" pour favoriser la mixité sociale.
+    - Pour les **lycées** : Le conseil régional, en collaboration avec l'autorité académique, 
+      définit les districts de recrutement en considérant les critères démographiques, 
+      économiques et sociaux.
+    """)
+
+    st.header("2. Annuaire de l'éducation")
+
+    st.subheader("Source des données détaillées")
+    st.markdown("""
+        - **API** : Annuaire de l'éducation
+        - **Usage** : Enrichissement des informations établissements
+        """)
+    st.markdown("[Accéder à l'API](https://data.occitanie.education.gouv.fr/explore/dataset/fr-en-annuaire-education/)")
+
+    st.markdown("""
+    Cette API nous permet d'enrichir notre application avec des informations détaillées 
+    sur chaque établissement :
+    - Coordonnées complètes
+    - Services disponibles (restauration, internat...)
+    - Options et sections spéciales
+    - Contacts et informations pratiques
+    """)
+
+    st.header("3. Base Adresse Nationale (BAN)")
+
+    st.subheader("Source de géocodage")
+    st.markdown("""
+        - **API** : API Adresse (Base Adresse Nationale)
+        - **Usage** : Géocodage des adresses
+        """)
+    st.markdown("[Accéder à l'API](https://api.gouv.fr/les-api/base-adresse-nationale)")
+
+    st.markdown("""
+    La BAN est utilisée pour :
+    - Convertir les adresses en coordonnées géographiques
+    - Permettre la visualisation cartographique
+    """)
+
+def legal_page():
+    st.title("Mentions légales")
+
+    st.markdown("""
+    ### Éditeur
+    Cette application est éditée dans le cadre d'un projet étudiant pour la formation M2 MIASHS à l'Université Paul-Valéry Montpellier 3 par Thomas Ayrivié.
+
+    ### Hébergement
+    Application hébergée sur Streamlit Cloud
+    San Francisco, CA 94107
+    United States.
+
+    ### Données personnelles
+    Cette application n'effectue aucune collecte de données personnelles.
+    Les données affichées sont issues de sources publiques (open data) fournies par la Région académique Occitanie et la BAN - Base des adresses nationales. Voir la section À propos pour plus d'informations.
+
+    ### Cookies
+    Cette application n'utilise pas de cookies.
+
+    ### Propriété intellectuelle
+    Le [code source](https://github.com/ThomasAyr/carte_scolaire_dev) de cette application est soumis à la licence MIT.
+    Les données utilisées sont sous licence ouverte.                 
+
+    ### Contact
+    Pour toute question concernant l'application :
+    - Email : [thomas.ayrivie@etu.univ-montp3.fr](mailto:thomas.ayrivie@etu.univ-montp3.fr)
+    - Formation MIASHS de l'UFR 6, Université Paul-Valéry Montpellier 3, Route de Mende, 34199 Montpellier Cedex 5
+    """)
+
+    st.info('NB : Ces mentions légales sont fournies à titre indicatif dans le cadre d\'un projet étudiant.')
 
 def get_population_data():
     """Données de population par département (2020) SOURCE INSEE"""
@@ -419,7 +547,7 @@ def stats_page():
             type_list = [t for t in df['type_etablissement'].unique() if t.strip()]
             all_types = ['Tous'] + sorted(type_list)
             selected_type = st.selectbox(
-                "Type d'établissement",
+                "Sélectionnez le type d'établissement",
                 options=all_types,
                 index=0,
                 key="type_filter"
@@ -696,19 +824,22 @@ def main():
         perimetre_page()
     elif st.session_state.get('page') == 'stats':
         stats_page()
+    elif st.session_state.get('page') == 'legal':
+        legal_page()
     else:
         search_page()
 
 with st.sidebar:
-    st.title("☰ Menu")
-    if st.button("Trouver mon établissement"):
+    if st.button("Trouver mon établissement de secteur"):
         st.session_state['page'] = 'search'
-    if st.button("Statistiques de la carte scolaire"):
-        st.session_state['page'] = 'stats'
     if st.button("Périmètre de recrutement d'établissement"):
         st.session_state['page'] = 'perimetre'
+    if st.button("Statistiques sur la carte scolaire"):
+        st.session_state['page'] = 'stats'
     if st.button("À propos"):
         st.session_state['page'] = 'about'
+    if st.button("Mentions légales"):
+        st.session_state['page'] = 'legal'
 
 if __name__ == "__main__":
     if 'page' not in st.session_state:
