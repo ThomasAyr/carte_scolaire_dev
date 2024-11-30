@@ -156,6 +156,8 @@ def load_data():
         return None
 
 def get_etablissements_api(codes_rne):
+    """Récupère les informations détaillées des établissements via l'API"""
+    """À un quota très restent de requêtes, il est préférable de ne pas utiliser cette fonction et d'utiliser la suivante"""
     if not codes_rne:
         return None
     
@@ -173,12 +175,84 @@ def get_etablissements_api(codes_rne):
     except Exception as e:
         st.error(f"Erreur lors de la récupération des données : {str(e)}")
         return None
+    
+def get_etablissements_api(codes_rne):
+    """Récupère les informations détaillées des établissements via l'API"""
+    retour = []
+    for code in codes_rne:
+        try:
+            url = f"https://data.occitanie.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-annuaire-education/records"
+            params = {
+                "limit": 20,
+                "refine": f"identifiant_de_l_etablissement:{code}"
+            }
+            response = requests.get(url, params=params)
+            response.raise_for_status()
+            data = response.json()
+            if data["results"]:  # Vérifier si des résultats existent
+                retour.extend(data["results"])  # Ajouter directement le résultat sans le wrapper dans une liste
+        except Exception as e:
+            st.error(f"Erreur lors de la récupération des données pour {code}: {str(e)}")
+            continue
+    
+    return {
+        "total_count": len(retour),  # Nombre réel d'établissements trouvés
+        "results": retour
+    }  
 
-def create_map(etablissements):
+def get_coordinates(code_insee, type_et_libelle, com_name_upper):
+    """
+    Récupère les coordonnées à partir des informations de l'adresse
+    
+    Args:
+        code_insee (str): Code INSEE de la commune
+        type_et_libelle (str): Libellé de la voie
+        com_name_upper (str): Nom de la commune en majuscules
+    
+    Returns:
+        tuple: (longitude, latitude) ou None si non trouvé
+    """
+    try:
+        # Construction de l'URL en fonction de la présence de type_et_libelle
+        base_url = "https://api-adresse.data.gouv.fr/search/"
+        
+        if type_et_libelle:
+            params = {
+                'q': type_et_libelle,
+                'type': 'street',
+                'citycode': int(code_insee)
+            }
+        else:
+            params = {
+                'q': com_name_upper
+            }
+        
+        # Appel à l'API
+        response = requests.get(base_url, params=params)
+        response.raise_for_status()
+        data = response.json()
+        
+        # Vérification et extraction des coordonnées
+        if data.get('features') and len(data['features']) > 0:
+            coordinates = data['features'][0]['geometry']['coordinates']
+            return [coordinates[1], coordinates[0]]
+        
+        return None
+        
+    except Exception as e:
+        print(f"Erreur lors de la géolocalisation : {str(e)}")
+        return None
+
+def create_map(etablissements, code_insee, type_et_libelle, com_name_upper):
+    coord_ville = get_coordinates(code_insee, type_et_libelle, com_name_upper)
+    lats, lons = [], []
+    if coord_ville != None:
+        lats += [float(coord_ville[0])]
+        lons += [float(coord_ville[1])]
     if etablissements:
         # Calculer le centre moyen de tous les établissements
-        lats = [float(etab['latitude']) for etab in etablissements if 'latitude' in etab]
-        lons = [float(etab['longitude']) for etab in etablissements if 'longitude' in etab]
+        lats += [float(etab['latitude']) for etab in etablissements if 'latitude' in etab]
+        lons += [float(etab['longitude']) for etab in etablissements if 'longitude' in etab]
         center = [sum(lats) / len(lats), sum(lons) / len(lons)]
         zoom_start = 11
     else:
@@ -203,10 +277,21 @@ def create_map(etablissements):
                 tooltip=etab['nom_etablissement'],
                 icon=folium.Icon(color=icon_color, icon='info-sign')
             ).add_to(m)
+    if coord_ville != None:
+        if type_et_libelle != None:
+            survol = type_et_libelle
+        else:
+            survol = com_name_upper
+            type_et_libelle = ""
+        folium.Marker(
+            coord_ville,
+            popup=f"<strong>{com_name_upper}</strong><br>{type_et_libelle}",
+            tooltip=survol,
+            icon=folium.Icon(color='green', icon='home')
+        ).add_to(m)
     
     if etablissements:
         m.fit_bounds([[min(lats), min(lons)], [max(lats), max(lons)]], padding=[50, 50])
-    
     return m
 
 def afficher_etablissement(etab):
@@ -332,7 +417,8 @@ def search_page():
                 
                 if api_data and 'results' in api_data:
                     st.subheader("Localisation des établissements")
-                    map = create_map(api_data['results'])
+                    map = create_map(api_data['results'], etablissements['code_insee'].tolist()[0], type_choisi, ville_selectionnee)
+                    print(etablissements['code_insee'].tolist()[0], type_choisi, ville_selectionnee)
                     folium_static(map)
                     
                     for etab in api_data['results']:
@@ -785,6 +871,192 @@ def stats_page():
             label="Adresses manquantes dans la carte des collèges",
             value=f"{len(adressevilles_lycee_only)}" 
         )
+
+    # Fonction pour regrouper par département
+    @st.cache_data
+    def group_by_dept(data_set):
+        dept_counts = {}
+        for item in data_set:
+            ville = item[0] if isinstance(item, tuple) else item
+            dept = filtered_df[filtered_df['com_name_upper'] == ville]['libelle_departement_eleve'].iloc[0]
+            dept_counts[dept] = dept_counts.get(dept, 0) + 1
+        return dept_counts
+
+    villes_missing_lycees = group_by_dept(villes_college_only)
+    villes_missing_colleges = group_by_dept(villes_lycee_only)
+    addr_missing_lycees = group_by_dept(adressevilles_college_only)
+    addr_missing_colleges = group_by_dept(adressevilles_lycee_only)
+
+    # Création des 4 graphiques
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Graphique 1: Villes manquantes dans la carte des lycées
+        fig1 = go.Figure(data=[
+            go.Bar(
+                x=list(villes_missing_lycees.keys()),
+                y=list(villes_missing_lycees.values()),
+                marker_color='#1f77b4',
+                hovertemplate="<b>%{x}</b><br>" +
+                             "Nombre de villes: %{y}<br>" +
+                             "%{customdata}<extra></extra>",
+                customdata=[format_ville_list([v for v in villes_college_only 
+                           if filtered_df[filtered_df['com_name_upper'] == v]['libelle_departement_eleve'].iloc[0] == dept])
+                           for dept in villes_missing_lycees.keys()]
+            )
+        ])
+        fig1.update_layout(
+            title={
+            'text': "Villes manquantes dans la carte des lycées", 
+            'font': {'size': 18, 'color': colors['text']}
+            },
+            xaxis={
+                'title': {'text': "Département", 'font': {'size': 18, 'color': colors['text']}},
+                'tickfont': {'size': 12, 'color': colors['text']}, 
+                'tickangle': 45
+            },
+            yaxis={
+                'title': {'text': "Nombre de villes", 'font': {'size': 18, 'color': colors['text']}},
+                'tickfont': {'size': 12, 'color': colors['text']}
+            },
+            height=400,
+            showlegend=False,
+            paper_bgcolor=colors['background'],
+            plot_bgcolor=colors['background'],
+            font={'color': colors['text']},
+            hoverlabel=dict(
+                bgcolor=colors['text'],
+                font_size=14,
+                font_family="Arial"
+            )
+        )
+        
+        st.plotly_chart(fig1, use_container_width=True)
+
+        # Graphique 3: Villes manquantes dans la carte des collèges
+        fig3 = go.Figure(data=[
+            go.Bar(
+                x=list(villes_missing_colleges.keys()),
+                y=list(villes_missing_colleges.values()),
+                marker_color='#2ca02c',
+                hovertemplate="<b>%{x}</b><br>" +
+                             "Nombre de villes: %{y}<br>" +
+                             "%{customdata}<extra></extra>",
+                customdata=[format_ville_list([v for v in villes_lycee_only 
+                           if filtered_df[filtered_df['com_name_upper'] == v]['libelle_departement_eleve'].iloc[0] == dept])
+                           for dept in villes_missing_colleges.keys()]
+            )
+        ])
+        fig3.update_layout(
+            title={
+            'text': "Villes manquantes dans la carte des collèges", 
+            'font': {'size': 18, 'color': colors['text']}
+            },
+            xaxis={
+                'title': {'text': "Département", 'font': {'size': 18, 'color': colors['text']}},
+                'tickfont': {'size': 12, 'color': colors['text']}, 
+                'tickangle': 45
+            },
+            yaxis={
+                'title': {'text': "Nombre de villes", 'font': {'size': 18, 'color': colors['text']}},
+                'tickfont': {'size': 12, 'color': colors['text']}
+            },
+            height=400,
+            showlegend=False,
+            paper_bgcolor=colors['background'],
+            plot_bgcolor=colors['background'],
+            font={'color': colors['text']},
+            hoverlabel=dict(
+                bgcolor=colors['text'],
+                font_size=14,
+                font_family="Arial"
+            )
+        )
+        st.plotly_chart(fig3, use_container_width=True)
+
+
+    with col2:
+        # Graphique 2: Adresses manquantes dans la carte des lycées
+        fig2 = go.Figure(data=[
+            go.Bar(
+                x=list(addr_missing_lycees.keys()),
+                y=list(addr_missing_lycees.values()),
+                marker_color='#ff7f0e',
+                hovertemplate="<b>%{x}</b><br>" +
+                             "Nombre d'adresses: %{y}<br>" +
+                             "%{customdata}<extra></extra>",
+                customdata=[format_ville_list([v[0] for v in adressevilles_college_only 
+                           if filtered_df[filtered_df['com_name_upper'] == v[0]]['libelle_departement_eleve'].iloc[0] == dept])
+                           for dept in addr_missing_lycees.keys()]
+            )
+        ])
+        fig2.update_layout(
+            title={
+            'text': "Adresses manquantes dans la carte des lycées", 
+            'font': {'size': 18, 'color': colors['text']}
+            },
+            xaxis={
+                'title': {'text': "Département", 'font': {'size': 18, 'color': colors['text']}},
+                'tickfont': {'size': 12, 'color': colors['text']}, 
+                'tickangle': 45
+            },
+            yaxis={
+                'title': {'text': "Nombre d'adresses", 'font': {'size': 18, 'color': colors['text']}},
+                'tickfont': {'size': 12, 'color': colors['text']}
+            },
+            height=400,
+            showlegend=False,
+            paper_bgcolor=colors['background'],
+            plot_bgcolor=colors['background'],
+            font={'color': colors['text']},
+            hoverlabel=dict(
+                bgcolor=colors['text'],
+                font_size=14,
+                font_family="Arial"
+            )
+        )
+        st.plotly_chart(fig2, use_container_width=True)
+
+        # Graphique 4: Adresses manquantes dans la carte des collèges
+        fig4 = go.Figure(data=[
+            go.Bar(
+                x=list(addr_missing_colleges.keys()),
+                y=list(addr_missing_colleges.values()),
+                marker_color='#d62728',
+                hovertemplate="<b>%{x}</b><br>" +
+                             "Nombre d'adresses: %{y}<br>" +
+                             "%{customdata}<extra></extra>",
+                customdata=[format_ville_list([v[0] for v in adressevilles_lycee_only 
+                           if filtered_df[filtered_df['com_name_upper'] == v[0]]['libelle_departement_eleve'].iloc[0] == dept])
+                           for dept in addr_missing_colleges.keys()]
+            )
+        ])
+        fig4.update_layout(
+            title={
+                'text': "Adresses manquantes dans la carte des collèges", 
+                'font': {'size': 18, 'color': colors['text']}
+            },
+            xaxis={
+                'title': {'text': "Département", 'font': {'size': 18, 'color': colors['text']}},
+                'tickfont': {'size': 12, 'color': colors['text']}, 
+                'tickangle': 45
+            },
+            yaxis={
+                'title': {'text': "Nombre d'adresses", 'font': {'size': 18, 'color': colors['text']}},
+                'tickfont': {'size': 12, 'color': colors['text']}
+            },
+            height=400,
+            showlegend=False,
+            paper_bgcolor=colors['background'],
+            plot_bgcolor=colors['background'],
+            font={'color': colors['text']},
+            hoverlabel=dict(
+                bgcolor=colors['text'],
+                font_size=14,
+                font_family="Arial"
+            )
+        )
+        st.plotly_chart(fig4, use_container_width=True)
 
 def perimetre_page():
     st.title("Périmètre de recrutement d'établissement")
