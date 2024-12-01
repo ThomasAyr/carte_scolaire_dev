@@ -1059,7 +1059,7 @@ def stats_page():
         st.plotly_chart(fig4, use_container_width=True)
 
 def perimetre_page():
-    st.title("Périmètre de recrutement d'établissement")
+    st.title("Périmètre de recrutement de l'établissement")
     st.write("À venir...")
 
 def main():
