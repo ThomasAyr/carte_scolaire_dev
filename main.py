@@ -51,6 +51,11 @@ st.markdown("""
         margin-top: 1rem;
         justify-content: flex-start;
     }
+            
+    [data-testid="stSidebarNav"] {
+        visibility: hidden;
+        display:none;
+    }
     
     .badge {
         color: #4F4F4F;
