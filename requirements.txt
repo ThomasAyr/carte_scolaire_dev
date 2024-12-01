@@ -5,4 +5,4 @@ geopandas
 requests
 folium
 plotly
-StringIO
+io
