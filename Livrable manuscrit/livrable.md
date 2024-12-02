@@ -13,7 +13,7 @@ Pour répondre à ces enjeux, j'ai développé une application web qui propose u
 
 L'application offre aux familles une interface intuitive leur permettant de localiser rapidement leur établissement de secteur. Cette interface se distingue du jeu de données brut par sa simplicité d'utilisation et sa visualisation cartographique interactive. Les utilisateurs peuvent ensuite accéder à des informations pertinentes concernant les établissements, les services proposés et coordonnées complètes.
 
-### Tableau de bord administratif
+### Tableau de bord administratif pour que les DSDEN (directions départementales de l'éducation nationale) puissent travailler sur les données 
 
 L'application intègre également un outil d'analyse destiné aux services administratifs. Ce tableau de bord permet notamment :
 
@@ -37,7 +37,7 @@ La stack technique a été choisie pour sa robustesse et sa maintenabilité :
 - Pandas pour le traitement optimisé des données
 - Streamlit Cloud pour un déploiement simplifié et scalable
 
-## Perspectives d'évolution
+## Perspectives d'évolution / idées pour aller plus loin
 
 Les principaux axes d'amélioration identifiés sont :
 
@@ -53,6 +53,9 @@ Un système de redressement des adresses permettrait d'améliorer significativem
 
 Le projet pourrait être enrichi par :
 
+- Permettre de connaître les distances entre établissements et adresses de domicile.
+- Mettre en place un outil administratif de redressement des adresses pour lier les adresses manquantes à sémantiques différentes.
+- Mettre à disposition le projet en réutilisation sur les plateformes Open-Data.
 - L'extension du périmètre à d'autres académies
 - L'intégration de données démographiques pour une analyse prospective
 - Des outils de simulation pour optimiser les évolutions de sectorisation
@@ -65,3 +68,7 @@ Cette application répond aux deux objectifs majeurs du **défi data.gouv.fr** :
 2. Fournir aux administrations des outils efficaces de pilotage territorial
 
 Au-delà de ces objectifs initiaux, l'application contribue à la transparence des politiques éducatives et offre un support précieux pour l'analyse de la mixité sociale dans les établissements.
+
+## Difficultés rencontrées
+1. L'API BAN (Base Nationale des Adresses) ne permet pas toujours de détecter les adresses qui n'existent pas. Solution pour le moment : Ne pas s'en soucier, comme c'est à un degré très faible.
+2. Avec l'API BAN, il n'est pas possible d'avoir des Geo shapes (périmètres géographiques) des secteurs de recrutement d'établissement.
